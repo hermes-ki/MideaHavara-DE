@@ -1,0 +1,48 @@
+# Konfiguration des Midea PortaSplit Verfügbarkeits-Trackers.
+# Anpassbar ohne Code-Änderung.
+
+product:
+  name: "Midea PortaSplit 12.000 BTU"
+  # Strikter Anker, damit nie das falsche/zu teure Gerät matcht.
+  # Bestätigte EAN der gesuchten Midea PortaSplit 12.000 BTU.
+  eans:
+    - "4048164116478"
+  # Schlüsselwörter für den Fallback-Titelabgleich, falls eine Quelle keine
+  # EAN liefert. ALLE müssen (case-insensitiv) im Titel vorkommen.
+  title_must_include:
+    - "portasplit"
+  # Schließt die teure Alt-Variante zusätzlich über den Titel aus.
+  title_must_exclude:
+    - "comfee"
+  max_price: 800.0  # EUR – nur Angebote darunter lösen aus
+  allow_used: true  # Amazon Warehouse / gebrauchte Artikel erlauben
+
+location:
+  postal_code: "74321"
+  city: "Bietigheim-Bissingen"
+  latitude: 48.9543
+  longitude: 9.1316
+  radius_km: 25  # Umkreis für Filial-Verfügbarkeit
+
+# Quellen ein-/ausschalten. Schlüssel entsprechen den Adapter-Namen.
+sources:
+  geizhals: true
+  idealo: true
+  mediamarkt: true
+  saturn: true
+  obi: true
+  bauhaus: true
+  hornbach: true
+  amazon: true
+
+# Pro Quelle die direkte Produkt-URL / Produkt-ID. Diese werden beim Setup
+# einmalig eingetragen (siehe README). Leere Werte werden übersprungen.
+source_urls:
+  geizhals: ""   # z.B. https://geizhals.de/midea-portasplit-aXXXXXXX.html
+  idealo: ""     # z.B. https://www.idealo.de/preisvergleich/OffersOfProduct/XXXXXXXXX.html
+  mediamarkt: "" # z.B. https://www.mediamarkt.de/de/product/_midea-portasplit-XXXXXXX.html
+  saturn: ""
+  obi: ""
+  bauhaus: ""
+  hornbach: ""
+  amazon: ""     # z.B. https://www.amazon.de/dp/B0D3PP64JS

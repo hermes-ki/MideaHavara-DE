@@ -1,0 +1,22 @@
+# Vorab aufgelöste Filialen im 25-km-Umkreis von 74321 Bietigheim-Bissingen.
+#
+# Diese Liste wird beim Setup einmalig gepflegt (siehe README, Abschnitt
+# "Filialen auflösen"). Jeder Eintrag braucht die ketteninterne Store-ID,
+# die der jeweilige Adapter für die Bestandsabfrage nutzt.
+#
+# distance_km darf leer bleiben – fehlt der Wert, wird er aus den
+# Koordinaten in config.yaml und lat/lon hier berechnet (geopy).
+
+mediamarkt: []
+  # - id: "S0001"
+  #   name: "Ludwigsburg"
+  #   lat: 48.8974
+  #   lon: 9.1916
+
+saturn: []
+
+obi: []
+
+bauhaus: []
+
+hornbach: []
