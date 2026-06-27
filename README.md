@@ -37,10 +37,10 @@ Ein Angebot alarmiert nur, wenn **alle** Bedingungen erfüllt sind
 ### Shop-Abdeckung (Stand der Live-Tests)
 | Shop | Status |
 |---|---|
-| **OBI** | ✅ direkt erreichbar, sauberes schema.org → meldet bei echter Online-Verfügbarkeit |
-| **Saturn** | ⚠️ erreichbar, aktuell „ausverkauft" → wird gemeldet sobald wieder bestellbar |
-| **MediaMarkt / Bauhaus** | ⚠️ erreichbar, aber SPA ohne schema.org → braucht Parsing der eingebetteten JSON-Daten (Ausbau) |
-| **Idealo / Hornbach / Amazon** | ❌ serverseitig hart geblockt (Bot-Wall, Mini-HTML) – aktuell ohne zuverlässige Daten |
+| **OBI** | ✅ direkt erreichbar, sauberes schema.org → meldet bei echter Online-Verfügbarkeit (aktuell `InStoreOnly`) |
+| **MediaMarkt / Saturn** | ✅ eingebettetes JSON (an Produkt-ID gekoppelt) wird geparst → meldet bei echtem Direkt-Angebot < 800 €. Aktuell nur Marketplace-Angebot ~2.589 € (fällt korrekt raus) |
+| **Bauhaus** | ⚠️ erreichbar, aber nur Analytics-Daten eingebettet → kein verlässliches Preis/Verfügbarkeits-Signal (zurückgestellt) |
+| **Idealo / Hornbach / Amazon** | ❌ serverseitig hart geblockt (Bot-Wall, Mini-HTML) – bräuchte Stealth/Proxy (zurückgestellt) |
 
 Diagnose jederzeit per Workflow **„Diagnose Shops"** (`inspect.yml`), Funktionstest
 der Push per **„Test-Alarm senden"** (`test-notify.yml`).

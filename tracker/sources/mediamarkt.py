@@ -18,6 +18,7 @@ from ..config import Config, Store
 from ..models import CHANNEL_ONLINE, CHANNEL_STORE, CONDITION_NEW, Offer
 from .base import browser_headers, fetch_html_via_browser, http_get, http_get_json
 from .buyability import assess_buyability
+from .embedded_json import extract_offers_for_product
 from .jsonld import extract_products
 
 log = logging.getLogger(__name__)
@@ -44,12 +45,15 @@ def _online_offers(cfg: Config, chain: str, url: str) -> list[Offer]:
         return []
     product_ean = cfg.product.eans[0] if cfg.product.eans else None
     offers: list[Offer] = []
-    for prod in extract_products(html):
+
+    # 1) Echtes schema.org (falls vorhanden).
+    products = extract_products(html)
+    for prod in products:
         if prod["price"] is None:
             continue
         buyable, signals = assess_buyability(html, jsonld_in_stock=prod["in_stock"])
         log.info(
-            "%s online: availability=%s -> bestellbar=%s %s",
+            "%s online (ld+json): availability=%s -> bestellbar=%s %s",
             chain, prod.get("availability_raw"), buyable, signals,
         )
         offers.append(
@@ -65,6 +69,31 @@ def _online_offers(cfg: Config, chain: str, url: str) -> list[Offer]:
                 merchant=chain.capitalize(),
             )
         )
+
+    # 2) Fallback: eingebettetes JSON, an die Produkt-ID gekoppelt (SPA-Plattform).
+    if not products:
+        product_id = _extract_product_id(url)
+        for emb in extract_offers_for_product(html, product_id or ""):
+            # Negativ-Marker der Seite (z.B. "ausverkauft") als zusätzliches Veto.
+            page_ok, _ = assess_buyability(html, jsonld_in_stock=emb["in_stock"])
+            buyable = emb["in_stock"] and page_ok
+            log.info(
+                "%s online (embedded): price=%s availability=%s -> bestellbar=%s",
+                chain, emb["price"], emb["availability_raw"], buyable,
+            )
+            offers.append(
+                Offer(
+                    source=chain,
+                    title=cfg.product.name,
+                    price=emb["price"],
+                    url=url,
+                    in_stock=buyable,
+                    condition=CONDITION_NEW,
+                    channel=CHANNEL_ONLINE,
+                    ean=product_ean,
+                    merchant=chain.capitalize(),
+                )
+            )
     return offers
 
 

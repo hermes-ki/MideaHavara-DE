@@ -43,13 +43,22 @@ def _iter_nodes(data) -> list[dict]:
     return nodes
 
 
-def _availability_in_stock(value) -> bool:
+def availability_in_stock(value) -> bool:
+    """Ob ein schema.org-availability-Wert ONLINE bestellbar bedeutet.
+
+    Öffentlich, damit auch der Embedded-JSON-Parser (SPA-Shops) dieselbe
+    Logik nutzt (InStoreOnly zählt bewusst nicht).
+    """
     if not value:
         return False
     if isinstance(value, list):
-        return any(_availability_in_stock(v) for v in value)
+        return any(availability_in_stock(v) for v in value)
     token = str(value).rsplit("/", 1)[-1].strip().lower().replace("-", "")
     return token in _IN_STOCK_TOKENS
+
+
+# Rückwärtskompatibler Alias (intern verwendet).
+_availability_in_stock = availability_in_stock
 
 
 def _to_float(value) -> float | None:
