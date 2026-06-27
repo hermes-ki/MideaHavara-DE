@@ -36,6 +36,14 @@ _SIGNAL_KEYS = (
     "purchasable",
     "buyable",
     '"price"',
+    "lieferbar",
+    "verfügbar",
+    "gtin13",
+    "datalayer",
+    "__next_data__",
+    "initialstate",
+    "currentprice",
+    "pricevalue",
 )
 
 
