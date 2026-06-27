@@ -26,7 +26,7 @@ location:
 
 # Quellen ein-/ausschalten. Schlüssel entsprechen den Adapter-Namen.
 sources:
-  geizhals: true
+  geizhals: false  # kein eigener Listeneintrag fürs richtige Gerät gefunden (nur Comfee)
   idealo: true
   mediamarkt: true
   saturn: true
@@ -35,14 +35,13 @@ sources:
   hornbach: true
   amazon: true
 
-# Pro Quelle die direkte Produkt-URL / Produkt-ID. Diese werden beim Setup
-# einmalig eingetragen (siehe README). Leere Werte werden übersprungen.
+# Pro Quelle die direkte Produkt-URL. Leere Werte werden übersprungen.
 source_urls:
-  geizhals: ""   # z.B. https://geizhals.de/midea-portasplit-aXXXXXXX.html
-  idealo: ""     # z.B. https://www.idealo.de/preisvergleich/OffersOfProduct/XXXXXXXXX.html
-  mediamarkt: "" # z.B. https://www.mediamarkt.de/de/product/_midea-portasplit-XXXXXXX.html
-  saturn: ""
-  obi: ""
-  bauhaus: ""
-  hornbach: ""
-  amazon: ""     # z.B. https://www.amazon.de/dp/B0D3PP64JS
+  geizhals: ""
+  idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/204374464.html"
+  mediamarkt: "https://www.mediamarkt.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
+  saturn: "https://www.saturn.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
+  obi: "https://www.obi.de/p/8620890/midea-mobile-split-klimaanlage-portasplit"
+  bauhaus: "https://www.bauhaus.info/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233"
+  hornbach: "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/"
+  amazon: "https://www.amazon.de/dp/B0D3PP64JS"
