@@ -39,8 +39,13 @@ Ein Angebot alarmiert nur, wenn **alle** Bedingungen erfüllt sind
 |---|---|
 | **OBI** | ✅ direkt erreichbar, sauberes schema.org → meldet bei echter Online-Verfügbarkeit (aktuell `InStoreOnly`) |
 | **MediaMarkt / Saturn** | ✅ eingebettetes JSON (an Produkt-ID gekoppelt) wird geparst → meldet bei echtem Direkt-Angebot < 800 €. Aktuell nur Marketplace-Angebot ~2.589 € (fällt korrekt raus) |
+| **Hornbach** | 🔓 Bot-Wall via Stealth-Browser überwunden (volle Seite), aber Preis/Verfügbarkeit werden erst per Client-API nachgeladen → bräuchte zusätzliches API-Parsing (zurückgestellt) |
 | **Bauhaus** | ⚠️ erreichbar, aber nur Analytics-Daten eingebettet → kein verlässliches Preis/Verfügbarkeits-Signal (zurückgestellt) |
-| **Idealo / Hornbach / Amazon** | ❌ serverseitig hart geblockt (Bot-Wall, Mini-HTML) – bräuchte Stealth/Proxy (zurückgestellt) |
+| **Idealo / Amazon** | ❌ hart geblockt (Bot-Wall hält auch mit Stealth, da Datacenter-IP) – bräuchte Residential-Proxy (zurückgestellt) |
+
+**Stealth-Fähigkeit:** Der Browser-Fallback (`tracker/sources/base.py`) verschleiert
+Automations-Merkmale und löst JS-Challenges auf; `fetch_page()` erkennt auch
+HTTP-200-Bot-Walls. Damit ist Hornbach erreichbar und OBI/MediaMarkt/Saturn robuster.
 
 Diagnose jederzeit per Workflow **„Diagnose Shops"** (`inspect.yml`), Funktionstest
 der Push per **„Test-Alarm senden"** (`test-notify.yml`).
