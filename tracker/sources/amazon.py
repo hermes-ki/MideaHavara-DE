@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from ..config import Config
 from ..models import CHANNEL_ONLINE, CONDITION_NEW, CONDITION_USED, Offer
-from .base import fetch_html_via_browser, http_get, parse_price
+from .base import fetch_page, parse_price
 
 log = logging.getLogger(__name__)
 
@@ -27,11 +27,10 @@ _ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{10})")
 
 
 def _html(url: str) -> str | None:
-    resp = http_get(url)
-    if resp is not None and resp.status_code == 200 and "captcha" not in resp.text.lower():
-        return resp.text
-    log.info("Amazon direkt geblockt/Captcha – versuche Browser-Fallback.")
-    return fetch_html_via_browser(url, wait_selector="#productTitle")
+    html, how = fetch_page(url, wait_selector="#productTitle")
+    if how == "blocked":
+        log.info("Amazon: Bot-Wall/Captcha nicht überwunden (geblockt).")
+    return html
 
 
 def _asin(url: str) -> str | None:

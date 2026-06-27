@@ -15,7 +15,7 @@ import logging
 import re
 
 from .config import load_config
-from .sources.base import fetch_html_via_browser, http_get
+from .sources.base import fetch_page
 from .sources.buyability import assess_buyability
 from .sources.jsonld import extract_products
 
@@ -61,11 +61,7 @@ def _dump_embedded_signals(html: str, *, max_per_key: int = 2, window: int = 90)
 
 
 def _fetch(url: str) -> tuple[str | None, str]:
-    resp = http_get(url, retries=2)
-    if resp is not None and resp.status_code == 200:
-        return resp.text, "direct"
-    html = fetch_html_via_browser(url, wait_selector=SELECTOR)
-    return html, "browser-fallback" if html else "failed"
+    return fetch_page(url, wait_selector=SELECTOR)
 
 
 def inspect() -> int:

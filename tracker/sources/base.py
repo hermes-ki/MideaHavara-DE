@@ -75,6 +75,26 @@ def http_get(
     return None
 
 
+def fetch_page(url: str, *, wait_selector: str | None = None) -> tuple[str | None, str]:
+    """Holt eine Produktseite robust: direkt, sonst Stealth-Browser.
+
+    Wichtig: Manche Shops (Hornbach/Amazon) liefern eine Bot-Wall mit HTTP 200
+    und winzigem HTML. Solche „Erfolge" werden als Challenge erkannt und gehen
+    trotzdem in den Browser-Fallback. Returns (html, how) mit how ∈
+    {"direct","browser","blocked"}.
+    """
+    resp = http_get(url)
+    if resp is not None and resp.status_code == 200 and not _looks_like_challenge(resp.text):
+        return resp.text, "direct"
+
+    html = fetch_html_via_browser(url, wait_selector=wait_selector)
+    if html and not _looks_like_challenge(html):
+        return html, "browser"
+
+    # Beste verfügbare (evtl. Challenge-)Antwort zurückgeben, klar markiert.
+    return (html or (resp.text if resp is not None else None)), "blocked"
+
+
 def http_get_json(url: str, **kwargs) -> dict | list | None:
     resp = http_get(url, **kwargs)
     if resp is None:

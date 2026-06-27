@@ -13,7 +13,7 @@ import logging
 
 from ..config import Config
 from ..models import CHANNEL_ONLINE, CONDITION_NEW, Offer
-from .base import fetch_html_via_browser, http_get
+from .base import fetch_page
 from .buyability import assess_buyability
 from .jsonld import extract_products
 
@@ -23,12 +23,10 @@ _LABEL = {"obi": "OBI", "bauhaus": "BAUHAUS", "hornbach": "Hornbach"}
 
 
 def _html(url: str) -> str | None:
-    resp = http_get(url)
-    if resp is not None and resp.status_code == 200:
-        return resp.text
-    # 403/Block erwartet -> echter Browser.
-    log.info("Baumarkt-Seite direkt nicht erreichbar – versuche Browser-Fallback.")
-    return fetch_html_via_browser(url, wait_selector="script[type='application/ld+json']")
+    html, how = fetch_page(url, wait_selector="script[type='application/ld+json']")
+    if how == "blocked":
+        log.info("Baumarkt-Seite: Bot-Wall nicht überwunden (geblockt).")
+    return html
 
 
 def fetch_offers(cfg: Config, chain: str = "obi") -> list[Offer]:

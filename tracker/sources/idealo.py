@@ -10,7 +10,7 @@ import logging
 
 from ..config import Config
 from ..models import CHANNEL_ONLINE, CONDITION_NEW, Offer
-from .base import fetch_html_via_browser, http_get
+from .base import fetch_page
 from .jsonld import extract_products
 
 log = logging.getLogger(__name__)
@@ -19,11 +19,10 @@ SOURCE = "idealo"
 
 
 def _html(url: str) -> str | None:
-    resp = http_get(url)
-    if resp is not None:
-        return resp.text
-    log.info("Idealo direkt geblockt – versuche Browser-Fallback.")
-    return fetch_html_via_browser(url, wait_selector="script[type='application/ld+json']")
+    html, how = fetch_page(url, wait_selector="script[type='application/ld+json']")
+    if how == "blocked":
+        log.info("Idealo: Bot-Wall nicht überwunden (geblockt).")
+    return html
 
 
 def fetch_offers(cfg: Config) -> list[Offer]:
