@@ -14,7 +14,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from ..config import Config
+from ..config import Config, Product
 from ..models import CHANNEL_ONLINE, CONDITION_NEW, CONDITION_USED, Offer
 from .base import fetch_page, parse_price
 
@@ -38,10 +38,10 @@ def _asin(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _parse_buybox(cfg: Config, html: str, url: str) -> list[Offer]:
+def _parse_buybox(product: Product, html: str, url: str) -> list[Offer]:
     soup = BeautifulSoup(html, "html.parser")
     title_el = soup.select_one("#productTitle")
-    title = title_el.get_text(strip=True) if title_el else cfg.product.name
+    title = title_el.get_text(strip=True) if title_el else product.name
 
     price = None
     for sel in ("#corePrice_feature_div .a-offscreen", "span.a-price span.a-offscreen", "#priceblock_ourprice"):
@@ -66,15 +66,15 @@ def _parse_buybox(cfg: Config, html: str, url: str) -> list[Offer]:
             in_stock=in_stock,
             condition=CONDITION_NEW,
             channel=CHANNEL_ONLINE,
-            ean=cfg.product.eans[0] if cfg.product.eans else None,
+            ean=product.eans[0] if product.eans else None,
             merchant="Amazon.de",
         )
     ]
 
 
-def _parse_warehouse(cfg: Config, asin: str) -> list[Offer]:
+def _parse_warehouse(product: Product, asin: str) -> list[Offer]:
     """Gebraucht-/Warehouse-Angebote aus der Offer-Listing-Seite."""
-    if not cfg.product.allow_used:
+    if not product.allow_used:
         return []
     url = f"https://www.amazon.de/gp/offer-listing/{asin}/ref=olp_f_usedLikeNew?f_used=true"
     html = _html(url)
@@ -95,33 +95,33 @@ def _parse_warehouse(cfg: Config, asin: str) -> list[Offer]:
         offers.append(
             Offer(
                 source=SOURCE,
-                title=cfg.product.name,
+                title=product.name,
                 price=price,
                 url=f"https://www.amazon.de/dp/{asin}",
                 in_stock=True,
                 condition=CONDITION_USED,
                 channel=CHANNEL_ONLINE,
-                ean=cfg.product.eans[0] if cfg.product.eans else None,
+                ean=product.eans[0] if product.eans else None,
                 merchant=f"Amazon Warehouse ({cond_text[:40]})",
             )
         )
     return offers
 
 
-def fetch_offers(cfg: Config) -> list[Offer]:
-    url = cfg.url_for(SOURCE)
+def fetch_offers(cfg: Config, product: Product) -> list[Offer]:
+    url = product.url_for(SOURCE)
     if not url:
-        log.info("Amazon: keine Produkt-URL konfiguriert – übersprungen.")
+        log.info("Amazon: keine Produkt-URL für '%s' konfiguriert – übersprungen.", product.name)
         return []
 
     offers: list[Offer] = []
     html = _html(url)
     if html:
-        offers.extend(_parse_buybox(cfg, html, url))
+        offers.extend(_parse_buybox(product, html, url))
 
     asin = _asin(url)
     if asin:
-        offers.extend(_parse_warehouse(cfg, asin))
+        offers.extend(_parse_warehouse(product, asin))
 
     log.info("Amazon: %d Angebote extrahiert.", len(offers))
     return offers

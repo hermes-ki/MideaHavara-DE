@@ -1,19 +1,38 @@
-# Vorab aufgelöste Filialen im 25-km-Umkreis von 74321 Bietigheim-Bissingen.
+# Filialen im 25-km-Umkreis von 74321 Bietigheim-Bissingen.
 #
-# Diese Liste wird beim Setup einmalig gepflegt (siehe README, Abschnitt
-# "Filialen auflösen"). Jeder Eintrag braucht die ketteninterne Store-ID,
-# die der jeweilige Adapter für die Bestandsabfrage nutzt.
+# Je Eintrag:
+#   id            ketteninterne Store-ID für die Bestandsabfrage. DARF leer
+#                 bleiben – dann ist die Filiale recherchiert, wird aber bis
+#                 zum Nachtragen der ID übersprungen (kein Fehlalarm).
+#   name          Anzeigename (Telegram/Logs).
+#   lat/lon       Koordinaten der Filiale. Fehlt distance_km, wird die
+#                 Entfernung daraus + den Koordinaten in config.yaml berechnet.
+#   distance_km   optional fest vorgeben (überschreibt die Berechnung).
 #
-# distance_km darf leer bleiben – fehlt der Wert, wird er aus den
-# Koordinaten in config.yaml und lat/lon hier berechnet (geopy).
+# Aktuell liefern nur die MediaMarkt-/Saturn-Adapter einen Filialbestand
+# (GraphQL-API). OBI/Bauhaus/Hornbach prüfen bisher nur Online-Verfügbarkeit –
+# ihre Filiallisten sind hier als Platzhalter vorbereitet.
+#
+# So an die MediaMarkt/Saturn-Store-ID kommen: Store-Finder öffnen
+# (https://www.mediamarkt.de/de/storefinder), Filiale wählen, die Zahl am Ende
+# der Store-URL (…/store/<NAME>-<ID>) ist die ID. Diese unten bei `id:` eintragen.
+# Die Koordinaten unten sind grobe Filialstandorte – bei Bedarf verfeinern.
 
-mediamarkt: []
-  # - id: "S0001"
-  #   name: "Ludwigsburg"
-  #   lat: 48.8974
-  #   lon: 9.1916
+mediamarkt:
+  - id: ""            # TODO: Store-ID eintragen (Store-Finder)
+    name: "Ludwigsburg"
+    lat: 48.9018
+    lon: 9.1660
+  - id: ""            # TODO
+    name: "Stuttgart Milaneo"
+    lat: 48.7930
+    lon: 9.1860
 
-saturn: []
+saturn:
+  - id: ""            # TODO
+    name: "Stuttgart Königstraße"
+    lat: 48.7770
+    lon: 9.1790
 
 obi: []
 

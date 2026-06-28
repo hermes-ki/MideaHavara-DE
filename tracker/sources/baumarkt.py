@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 
-from ..config import Config
+from ..config import Config, Product
 from ..models import CHANNEL_ONLINE, CONDITION_NEW, Offer
 from .base import fetch_page
 from .buyability import assess_buyability
@@ -29,17 +29,17 @@ def _html(url: str) -> str | None:
     return html
 
 
-def fetch_offers(cfg: Config, chain: str = "obi") -> list[Offer]:
-    url = cfg.url_for(chain)
+def fetch_offers(cfg: Config, product: Product, chain: str = "obi") -> list[Offer]:
+    url = product.url_for(chain)
     if not url:
-        log.info("%s: keine Produkt-URL konfiguriert – übersprungen.", chain)
+        log.info("%s: keine Produkt-URL für '%s' konfiguriert – übersprungen.", chain, product.name)
         return []
 
     html = _html(url)
     if not html:
         return []
 
-    product_ean = cfg.product.eans[0] if cfg.product.eans else None
+    product_ean = product.eans[0] if product.eans else None
     label = _LABEL.get(chain, chain.capitalize())
     offers: list[Offer] = []
     for prod in extract_products(html):
@@ -55,7 +55,7 @@ def fetch_offers(cfg: Config, chain: str = "obi") -> list[Offer]:
         offers.append(
             Offer(
                 source=chain,
-                title=prod["title"] or cfg.product.name,
+                title=prod["title"] or product.name,
                 price=prod["price"],
                 url=url,
                 in_stock=buyable,

@@ -68,29 +68,48 @@ Im Repo unter **Settings → Secrets and variables → Actions → New repositor
 > das Repo **öffentlich** sein → unbegrenzte Actions-Minuten für den 10-Min-Takt.
 > (Privates Repo: 2.000 Min/Monat – ggf. Intervall in `check.yml` auf `*/15` erhöhen.)
 
-### 3. Produkt-URLs eintragen (`config.yaml`)
-Trage je Quelle die direkte Produktseite ein (leere Werte werden übersprungen):
+### 3. Produkte & URLs eintragen (`config.yaml`)
+Die **Watchlist** (`products:`) kann beliebig viele Geräte enthalten – jeder
+Eintrag bringt seine eigenen Shop-URLs (`urls:`) mit. Die globalen Blöcke
+`location` und `sources` gelten für alle Produkte.
 
-| Quelle | Beispiel-URL |
-|---|---|
-| `geizhals` | `https://geizhals.de/midea-portasplit-aXXXXXXX.html` |
-| `idealo` | `https://www.idealo.de/preisvergleich/OffersOfProduct/XXXXXXXX.html` |
-| `mediamarkt` | `https://www.mediamarkt.de/de/product/_midea-portasplit-XXXXXXX.html` |
-| `saturn` | `https://www.saturn.de/de/product/_midea-portasplit-XXXXXXX.html` |
-| `obi` | `https://www.obi.de/p/8620890/...` |
-| `bauhaus` | `https://www.bauhaus.info/.../p/31934233` |
-| `hornbach` | `https://www.hornbach.de/p/...` |
-| `amazon` | `https://www.amazon.de/dp/B0D3PP64JS` |
+```yaml
+products:
+  - name: "Midea PortaSplit 12.000 BTU"
+    eans: ["4048164116478"]
+    title_must_include: ["portasplit"]
+    title_must_exclude: ["comfee"]
+    max_price: 800.0
+    allow_used: true
+    urls:
+      idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/XXXXXXXX.html"
+      mediamarkt: "https://www.mediamarkt.de/de/product/_midea-portasplit-XXXXXXX.html"
+      obi: "https://www.obi.de/p/8620890/..."
+      amazon: "https://www.amazon.de/dp/B0D3PP64JS"
+  # - name: "Weiteres Gerät"
+  #   eans: ["..."]
+  #   ...
+  #   urls: { idealo: "..." }
+```
 
-> Die URLs findest du, indem du das Gerät (EAN `4048164116478`) im jeweiligen
-> Shop suchst. Quellen, die du nicht nutzen willst, kannst du unter `sources:`
-> auf `false` setzen.
+> Leere/fehlende URLs werden je Produkt übersprungen. Quellen, die du gar nicht
+> nutzen willst, unter `sources:` auf `false` setzen. Das **alte Format**
+> (`product:` + globaler `source_urls:`-Block) wird weiterhin geladen.
 
 ### 4. Filialen im Umkreis auflösen (`stores.yaml`, optional)
 Für **Filial-Bestand** bei MediaMarkt/Saturn die Märkte im 25-km-Umkreis
-(z.B. Ludwigsburg, Stuttgart, Sindelfingen) mit ihrer ketteninternen
-Store-ID und Koordinaten eintragen. Ohne Einträge wird nur die
-**Online-Verfügbarkeit** geprüft (die i.d.R. wichtigste).
+(z.B. Ludwigsburg, Stuttgart) mit Koordinaten und ketteninterner **Store-ID**
+eintragen. `stores.yaml` ist mit den Filialen vorbefüllt – es fehlen nur die
+IDs:
+
+1. Store-Finder öffnen: `https://www.mediamarkt.de/de/storefinder`
+2. Filiale wählen; die Zahl am Ende der Store-URL (`…/store/<NAME>-<ID>`) ist
+   die ID → bei `id:` in `stores.yaml` eintragen.
+
+Ein Eintrag **ohne ID** ist erlaubt: die Filiale wird dann übersprungen (kein
+Fehlalarm), die Distanz aber bereits aus den Koordinaten berechnet. Ohne
+nutzbare Einträge wird nur die **Online-Verfügbarkeit** geprüft (die i.d.R.
+wichtigste).
 
 ## Lokal testen
 

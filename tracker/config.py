@@ -21,6 +21,11 @@ class Product:
     title_must_exclude: list[str]
     max_price: float
     allow_used: bool
+    # Pro Quelle die direkte Produkt-URL dieses Geräts. Leere Werte = übersprungen.
+    urls: dict[str, str] = field(default_factory=dict)
+
+    def url_for(self, source: str) -> str:
+        return (self.urls.get(source) or "").strip()
 
 
 @dataclass
@@ -44,17 +49,18 @@ class Store:
 
 @dataclass
 class Config:
-    product: Product
+    products: list[Product]
     location: Location
     sources: dict[str, bool]
-    source_urls: dict[str, str]
     stores: dict[str, list[Store]] = field(default_factory=dict)
+
+    @property
+    def product(self) -> Product:
+        """Erstes Produkt – Komfort für Einzelprodukt-Aufrufer (z.B. Demo)."""
+        return self.products[0]
 
     def enabled_sources(self) -> list[str]:
         return [name for name, on in self.sources.items() if on]
-
-    def url_for(self, source: str) -> str:
-        return (self.source_urls.get(source) or "").strip()
 
     def stores_for(self, chain: str) -> list[Store]:
         return self.stores.get(chain, [])
@@ -79,18 +85,36 @@ class Secrets:
         return bool(self.telegram_bot_token and self.telegram_chat_id)
 
 
-def load_config(config_path: Path = CONFIG_PATH, stores_path: Path = STORES_PATH) -> Config:
-    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+def _parse_product(p: dict, fallback_urls: dict[str, str] | None = None) -> Product:
+    """Baut ein ``Product`` aus einem Config-Block.
 
-    p = data["product"]
-    product = Product(
+    ``fallback_urls`` dient der Rückwärtskompatibilität: im alten Format stehen
+    die URLs im globalen ``source_urls``-Block statt am Produkt.
+    """
+    urls = {k: str(v) for k, v in (p.get("urls") or fallback_urls or {}).items()}
+    return Product(
         name=p["name"],
         eans=[str(e) for e in p.get("eans", [])],
         title_must_include=[s.lower() for s in p.get("title_must_include", [])],
         title_must_exclude=[s.lower() for s in p.get("title_must_exclude", [])],
         max_price=float(p["max_price"]),
         allow_used=bool(p.get("allow_used", False)),
+        urls=urls,
     )
+
+
+def load_config(config_path: Path = CONFIG_PATH, stores_path: Path = STORES_PATH) -> Config:
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+    # Neues Format: products: [ {…, urls: {…}}, … ]
+    # Altes Format: product: {…} + source_urls: {…}  (eine Watchlist mit 1 Eintrag)
+    if data.get("products"):
+        products = [_parse_product(p) for p in data["products"]]
+    else:
+        legacy_urls = dict(data.get("source_urls", {}))
+        products = [_parse_product(data["product"], fallback_urls=legacy_urls)]
+    if not products:
+        raise ValueError("config.yaml enthält keine Produkte (weder 'products' noch 'product').")
 
     loc = data["location"]
     location = Location(
@@ -108,8 +132,10 @@ def load_config(config_path: Path = CONFIG_PATH, stores_path: Path = STORES_PATH
             stores[chain] = [
                 Store(
                     chain=chain,
-                    id=str(e["id"]),
-                    name=e.get("name", str(e["id"])),
+                    # id darf fehlen/leer sein (Filiale recherchiert, ID noch
+                    # offen) – der Adapter überspringt solche Einträge dann.
+                    id=str(e.get("id") or "").strip(),
+                    name=str(e.get("name") or e.get("id") or "?"),
                     lat=e.get("lat"),
                     lon=e.get("lon"),
                     distance_km=e.get("distance_km"),
@@ -118,9 +144,8 @@ def load_config(config_path: Path = CONFIG_PATH, stores_path: Path = STORES_PATH
             ]
 
     return Config(
-        product=product,
+        products=products,
         location=location,
         sources=dict(data.get("sources", {})),
-        source_urls=dict(data.get("source_urls", {})),
         stores=stores,
     )

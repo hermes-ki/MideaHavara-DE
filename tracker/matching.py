@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from math import asin, cos, radians, sin, sqrt
 
-from .config import Config, Product
+from .config import Location, Product
 from .models import CHANNEL_STORE, CONDITION_USED, Offer
 
 
@@ -33,7 +33,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * asin(sqrt(a))
 
 
-def is_buyable(offer: Offer, cfg: Config) -> bool:
+def is_buyable(offer: Offer, product: Product, location: Location) -> bool:
     """Der zentrale "nur wirklich bestellbar"-Filter.
 
     Ein Angebot zählt nur, wenn ALLE Bedingungen erfüllt sind:
@@ -43,8 +43,6 @@ def is_buyable(offer: Offer, cfg: Config) -> bool:
       4. Zustand erlaubt (gebraucht nur wenn konfiguriert),
       5. Filialen: innerhalb des Radius.
     """
-    product = cfg.product
-
     if not matches_product(offer, product):
         return False
     if not offer.in_stock:
@@ -55,11 +53,10 @@ def is_buyable(offer: Offer, cfg: Config) -> bool:
         return False
 
     if offer.channel == CHANNEL_STORE:
-        dist = offer.distance_km
-        if dist is None and offer.distance_km is None:
+        if offer.distance_km is None:
             # Ohne Distanz können wir den Radius nicht garantieren -> ausschließen.
             return False
-        if dist is not None and dist > cfg.location.radius_km:
+        if offer.distance_km > location.radius_km:
             return False
 
     return True

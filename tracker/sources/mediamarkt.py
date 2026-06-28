@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import logging
 
-from ..config import Config, Store
+from ..config import Config, Product, Store
 from ..models import CHANNEL_ONLINE, CHANNEL_STORE, CONDITION_NEW, Offer
-from .base import browser_headers, fetch_html_via_browser, http_get, http_get_json
+from .base import browser_headers, fetch_page, http_get_json
 from .buyability import assess_buyability
 from .embedded_json import extract_offers_for_product
 from .jsonld import extract_products
@@ -30,20 +30,33 @@ _SALESLINE = {"mediamarkt": "Media", "saturn": "Saturn"}
 _AVAIL_QUERY_HASH = "810286f7ae9368cb54ccd122b21e453bd00ed7dbf534b8259b8bed68f8da999f"
 
 _IN_STORE_TOKENS = {"IN_STORE", "IN_WAREHOUSE", "AVAILABLE", "PICKUP"}
+# Negativ-Status, die "AVAILABLE" als Teilstring enthalten (z.B. NOT_AVAILABLE,
+# UNAVAILABLE) und sonst fälschlich als verfügbar zählen würden.
+_NOT_IN_STORE_MARKERS = ("NOT_AVAILABLE", "UNAVAILABLE", "NOT AVAILABLE", "OUT_OF_STOCK", "SOLD")
+
+
+def _status_in_store(status: str) -> bool:
+    """Ob ein Filial-Status echten Bestand bedeutet (Negativ-Status haben Vorrang)."""
+    status = status.upper()
+    if any(neg in status for neg in _NOT_IN_STORE_MARKERS):
+        return False
+    return any(tok in status for tok in _IN_STORE_TOKENS)
 
 
 def _product_html(url: str) -> str | None:
-    resp = http_get(url)
-    if resp is not None:
-        return resp.text
-    return fetch_html_via_browser(url, wait_selector="script[type='application/ld+json']")
+    # fetch_page erkennt auch HTTP-200-Bot-Walls und geht dann in den
+    # Stealth-Browser-Fallback (statt eine Challenge-Seite zu parsen).
+    html, how = fetch_page(url, wait_selector="script[type='application/ld+json']")
+    if how == "blocked":
+        log.info("MediaMarkt/Saturn: Bot-Wall nicht überwunden (geblockt).")
+    return html
 
 
-def _online_offers(cfg: Config, chain: str, url: str) -> list[Offer]:
+def _online_offers(cfg: Config, product: Product, chain: str, url: str) -> list[Offer]:
     html = _product_html(url)
     if not html:
         return []
-    product_ean = cfg.product.eans[0] if cfg.product.eans else None
+    product_ean = product.eans[0] if product.eans else None
     offers: list[Offer] = []
 
     # 1) Echtes schema.org (falls vorhanden).
@@ -59,7 +72,7 @@ def _online_offers(cfg: Config, chain: str, url: str) -> list[Offer]:
         offers.append(
             Offer(
                 source=chain,
-                title=prod["title"] or cfg.product.name,
+                title=prod["title"] or product.name,
                 price=prod["price"],
                 url=url,
                 in_stock=buyable,
@@ -84,7 +97,7 @@ def _online_offers(cfg: Config, chain: str, url: str) -> list[Offer]:
             offers.append(
                 Offer(
                     source=chain,
-                    title=cfg.product.name,
+                    title=product.name,
                     price=emb["price"],
                     url=url,
                     in_stock=buyable,
@@ -104,8 +117,10 @@ def _extract_product_id(url: str) -> str | None:
     return digits or None
 
 
-def _store_offers(cfg: Config, chain: str, url: str, online_price: float | None) -> list[Offer]:
-    stores = cfg.stores_for(chain)
+def _store_offers(
+    cfg: Config, product: Product, chain: str, url: str, online_price: float | None
+) -> list[Offer]:
+    stores = [s for s in cfg.stores_for(chain) if s.id]  # nur mit bekannter Store-ID
     product_id = _extract_product_id(url)
     if not stores or not product_id:
         return []
@@ -140,22 +155,27 @@ def _store_offers(cfg: Config, chain: str, url: str, online_price: float | None)
 
     offers: list[Offer] = []
     for store in stores:
+        if not store.id:
+            # Filiale ist hinterlegt, aber die ketteninterne ID fehlt noch
+            # (siehe stores.yaml) – ohne ID keine Bestandsabfrage möglich.
+            log.info("%s: Filiale '%s' ohne Store-ID – übersprungen.", chain, store.name)
+            continue
         entry = by_store.get(store.id)
         if not entry:
             continue
-        status = str(entry.get("availabilityType") or entry.get("status") or "").upper()
-        if not any(tok in status for tok in _IN_STORE_TOKENS):
+        status = str(entry.get("availabilityType") or entry.get("status") or "")
+        if not _status_in_store(status):
             continue
         offers.append(
             Offer(
                 source=chain,
-                title=cfg.product.name,
-                price=online_price or cfg.product.max_price,
+                title=product.name,
+                price=online_price or product.max_price,
                 url=url,
                 in_stock=True,
                 condition=CONDITION_NEW,
                 channel=CHANNEL_STORE,
-                ean=cfg.product.eans[0] if cfg.product.eans else None,
+                ean=product.eans[0] if product.eans else None,
                 merchant=chain.capitalize(),
                 store_name=store.name,
                 distance_km=_distance(cfg, store),
@@ -174,15 +194,15 @@ def _distance(cfg: Config, store: Store) -> float | None:
     return haversine_km(cfg.location.latitude, cfg.location.longitude, store.lat, store.lon)
 
 
-def fetch_offers(cfg: Config, chain: str = "mediamarkt") -> list[Offer]:
-    url = cfg.url_for(chain)
+def fetch_offers(cfg: Config, product: Product, chain: str = "mediamarkt") -> list[Offer]:
+    url = product.url_for(chain)
     if not url:
-        log.info("%s: keine Produkt-URL konfiguriert – übersprungen.", chain)
+        log.info("%s: keine Produkt-URL für '%s' konfiguriert – übersprungen.", chain, product.name)
         return []
 
-    online = _online_offers(cfg, chain, url)
+    online = _online_offers(cfg, product, chain, url)
     online_price = online[0].price if online else None
-    store = _store_offers(cfg, chain, url, online_price)
+    store = _store_offers(cfg, product, chain, url, online_price)
 
     log.info("%s: %d online + %d Filial-Angebote.", chain, len(online), len(store))
     return online + store

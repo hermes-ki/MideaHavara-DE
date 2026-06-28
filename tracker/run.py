@@ -10,8 +10,9 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from dataclasses import replace
 
-from .config import Config, Secrets, load_config
+from .config import Config, Product, Secrets, load_config
 from .matching import is_buyable
 from .models import CHANNEL_ONLINE, CONDITION_NEW, Offer
 from .notify import format_offers, send_telegram
@@ -21,8 +22,8 @@ from .state import diff_new, load_seen, save_seen
 log = logging.getLogger(__name__)
 
 
-def collect_offers(cfg: Config) -> list[Offer]:
-    """Fragt alle aktivierten Quellen ab. Fehler isolieren pro Quelle."""
+def collect_offers_for_product(cfg: Config, product: Product) -> list[Offer]:
+    """Fragt alle aktivierten Quellen für EIN Produkt ab. Fehler pro Quelle isolieren."""
     all_offers: list[Offer] = []
     for name in cfg.enabled_sources():
         fn = get_source(name)
@@ -30,28 +31,35 @@ def collect_offers(cfg: Config) -> list[Offer]:
             log.warning("Unbekannte Quelle '%s' – übersprungen.", name)
             continue
         try:
-            offers = fn(cfg)
-            all_offers.extend(offers)
+            offers = fn(cfg, product)
+            # Angebote mit dem konfigurierten Produktnamen taggen (Gruppierung).
+            all_offers.extend(replace(o, product_name=product.name) for o in offers)
         except Exception as exc:  # noqa: BLE001 - eine Quelle darf nicht den Lauf kippen
-            log.error("Quelle '%s' fehlgeschlagen: %s", name, exc, exc_info=True)
+            log.error("Quelle '%s' (%s) fehlgeschlagen: %s", name, product.name, exc, exc_info=True)
     return all_offers
 
 
-def filter_buyable(cfg: Config, offers: list[Offer]) -> list[Offer]:
-    return [o for o in offers if is_buyable(o, cfg)]
+def collect_buyable(cfg: Config) -> list[Offer]:
+    """Sammelt über die ganze Watchlist alle wirklich bestellbaren Angebote."""
+    buyable: list[Offer] = []
+    for product in cfg.products:
+        offers = collect_offers_for_product(cfg, product)
+        kept = [o for o in offers if is_buyable(o, product, cfg.location)]
+        log.info("'%s': %d Angebote, davon %d wirklich bestellbar < %.0f €.",
+                 product.name, len(offers), len(kept), product.max_price)
+        buyable.extend(kept)
+    return buyable
 
 
 def run(dry_run: bool = False) -> int:
     cfg = load_config()
     secrets = Secrets.from_env()
 
-    log.info("Starte Check für '%s' (max %.0f €, Quellen: %s)",
-             cfg.product.name, cfg.product.max_price, ", ".join(cfg.enabled_sources()))
+    names = ", ".join(p.name for p in cfg.products)
+    log.info("Starte Check für %d Produkt(e) [%s] (Quellen: %s)",
+             len(cfg.products), names, ", ".join(cfg.enabled_sources()))
 
-    offers = collect_offers(cfg)
-    buyable = filter_buyable(cfg, offers)
-    log.info("%d Angebote gesamt, davon %d wirklich bestellbar < %.0f €.",
-             len(offers), len(buyable), cfg.product.max_price)
+    buyable = collect_buyable(cfg)
     for o in buyable:
         log.info("  ✓ %s", o.describe())
 
@@ -60,7 +68,7 @@ def run(dry_run: bool = False) -> int:
 
     if new_offers:
         log.info("%d NEUE verfügbare Angebote -> Benachrichtigung.", len(new_offers))
-        message = format_offers(cfg.product.name, new_offers)
+        message = format_offers(new_offers)
         if dry_run:
             print("--- DRY RUN: Telegram-Nachricht ---")
             print(message)
@@ -80,19 +88,22 @@ def run_demo() -> int:
     """Schickt einen einmaligen Beispiel-Alarm im echten Format (Funktionstest)."""
     cfg = load_config()
     secrets = Secrets.from_env()
+    product = cfg.product
     demo = Offer(
         source="hornbach",
-        title=f"{cfg.product.name} (BEISPIEL/Test)",
+        title=f"{product.name} (BEISPIEL/Test)",
         price=699.0,
-        url="https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/",
+        url=product.url_for("hornbach")
+        or "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/",
         in_stock=True,
         condition=CONDITION_NEW,
         channel=CHANNEL_ONLINE,
-        ean=cfg.product.eans[0] if cfg.product.eans else None,
+        ean=product.eans[0] if product.eans else None,
         merchant="Hornbach (Test-Alarm)",
+        product_name=product.name,
     )
     message = "🔔 <b>TEST-ALARM</b> – so sieht eine echte Benachrichtigung aus:\n\n" + format_offers(
-        cfg.product.name, [demo]
+        [demo]
     )
     ok = send_telegram(message, secrets)
     log.info("Test-Alarm gesendet." if ok else "Test-Alarm fehlgeschlagen (Secrets prüfen).")
