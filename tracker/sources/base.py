@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import random
 import re
@@ -214,6 +215,87 @@ def fetch_html_via_browser(
             return html
     except Exception as exc:  # noqa: BLE001 - Browser-Fallback ist best effort
         log.warning("Browser-Fallback für %s fehlgeschlagen: %s", url, exc)
+        return None
+
+
+def fetch_json_via_browser(
+    url: str,
+    *,
+    referer: str | None = None,
+    headers: dict | None = None,
+    timeout_ms: int = BROWSER_GOTO_MS,
+) -> dict | list | None:
+    """Holt eine JSON-API über eine echte Browser-Session (gegen Bot-Walls).
+
+    Manche Endpoints (z.B. die MediaMarkt/Saturn-Filial-API) liefern an
+    Rechenzentrums-IPs eine HTTP-403-Bot-Wall, sobald man sie mit ``requests``
+    aufruft. Wir besuchen daher zuerst die ``referer``-Seite (löst die
+    JS-Challenge, setzt Cookies) und rufen die API dann per In-Page ``fetch()``
+    auf – mit dem echten Browser-Networking und den frisch gesetzten Cookies.
+
+    Gibt das geparste JSON zurück oder ``None`` (Import/Start fehlgeschlagen,
+    geblockt oder kein gültiges JSON) – immer best effort, nie werfend.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        log.info("Playwright nicht installiert – JSON-Browser-Fallback für %s übersprungen.", url)
+        return None
+
+    ua = random.choice(_USER_AGENTS)
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-blink-features=AutomationControlled",
+                ],
+            )
+            ctx = browser.new_context(
+                user_agent=ua,
+                locale="de-DE",
+                timezone_id="Europe/Berlin",
+                viewport={"width": 1366, "height": 768},
+            )
+            ctx.add_init_script(_STEALTH_INIT)
+            page = ctx.new_page()
+            page.set_default_timeout(BROWSER_SELECTOR_MS)
+
+            # 1) Referer-Seite besuchen, um Challenge zu lösen / Cookies zu setzen.
+            if referer:
+                try:
+                    page.goto(referer, wait_until="domcontentloaded", timeout=timeout_ms)
+                    if _looks_like_challenge(page.content()):
+                        page.wait_for_timeout(2500)
+                except Exception:  # noqa: BLE001 - langsame/blockierende Seite
+                    pass
+
+            # 2) API per In-Page-fetch() mit echten Browser-Cookies abrufen.
+            try:
+                result = page.evaluate(
+                    """async ({url, headers}) => {
+                        try {
+                            const r = await fetch(url, {headers, credentials: 'include'});
+                            return {status: r.status, body: await r.text()};
+                        } catch (e) { return {status: 0, body: ''}; }
+                    }""",
+                    {"url": url, "headers": headers or {}},
+                )
+            finally:
+                browser.close()
+
+        if not result or result.get("status") != 200:
+            log.info("JSON-Browser-Fallback %s -> HTTP %s", url, result and result.get("status"))
+            return None
+        try:
+            return json.loads(result["body"])
+        except (ValueError, TypeError):
+            log.warning("JSON-Browser-Fallback: Antwort von %s ist kein gültiges JSON.", url)
+            return None
+    except Exception as exc:  # noqa: BLE001 - best effort
+        log.warning("JSON-Browser-Fallback für %s fehlgeschlagen: %s", url, exc)
         return None
 
 

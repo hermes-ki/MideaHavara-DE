@@ -67,6 +67,31 @@ def test_store_without_id_is_skipped(monkeypatch):
     assert called["n"] == 0
 
 
+def test_browser_fallback_used_when_http_blocked(monkeypatch):
+    # http_get_json simuliert die Bot-Wall (403 -> None); der Browser-Fallback
+    # liefert dann das JSON und es entsteht trotzdem ein Filial-Angebot.
+    store = Store(chain="mediamarkt", id="450", name="Ludwigsburg", lat=48.9080, lon=9.1720)
+    cfg = _cfg([store])
+
+    monkeypatch.setattr(mediamarkt, "http_get_json", lambda *a, **k: None)
+
+    captured = {}
+
+    def fake_browser(full_url, **kwargs):
+        captured["url"] = full_url
+        captured["referer"] = kwargs.get("referer")
+        return {"data": {"availabilities": [{"storeId": "450", "availabilityType": "IN_STORE"}]}}
+
+    monkeypatch.setattr(mediamarkt, "fetch_json_via_browser", fake_browser)
+
+    offers = mediamarkt._store_offers(cfg, cfg.product, "mediamarkt", URL, online_price=699.0)
+    assert len(offers) == 1
+    assert offers[0].store_name == "Ludwigsburg"
+    # Die API-URL trägt die Produkt-ID, der Referer ist die Produktseite.
+    assert "142245268" in captured["url"]
+    assert captured["referer"] == URL
+
+
 def test_store_not_in_stock_no_offer(monkeypatch):
     store = Store(chain="mediamarkt", id="S123", name="Ludwigsburg", lat=48.9018, lon=9.1660)
     cfg = _cfg([store])

@@ -111,6 +111,18 @@ Fehlalarm), die Distanz aber bereits aus den Koordinaten berechnet. Ohne
 nutzbare Einträge wird nur die **Online-Verfügbarkeit** geprüft (die i.d.R.
 wichtigste).
 
+> **Status Filialbestand (best effort):** Die MediaMarkt/Saturn-Bestands-API
+> sitzt hinter einer WAF. Der Adapter ruft sie daher über eine echte
+> Browser-Session ab (`fetch_json_via_browser`) mit den korrekten PWA-Headern –
+> damit kommt er an der HTTP-403-Bot-Wall vorbei (verifiziert: API antwortet
+> 200). Der `persistedQuery`-Hash (`_AVAIL_QUERY_HASH` in
+> `tracker/sources/mediamarkt.py`) **rotiert mit jedem PWA-Release**; ist er
+> veraltet, kommt `PersistedQueryNotFound` und es gibt schlicht keinen
+> Filialtreffer. Aktuellen Hash nachtragen: Produktseite → DevTools → Netzwerk
+> (Filter `graphql`) → „Verfügbarkeit im Markt" prüfen → den `sha256Hash` aus
+> dem `GetProductAvailabilities`-Request kopieren. Die **Online-Verfügbarkeit**
+> bleibt davon unberührt und ist der zuverlässige Teil.
+
 ## Lokal testen
 
 ```bash

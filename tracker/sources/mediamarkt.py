@@ -13,10 +13,12 @@ fällt der Adapter still auf die Online-Daten zurück.
 from __future__ import annotations
 
 import logging
+import uuid
+from urllib.parse import urlencode
 
 from ..config import Config, Product, Store
 from ..models import CHANNEL_ONLINE, CHANNEL_STORE, CONDITION_NEW, Offer
-from .base import browser_headers, fetch_page, http_get_json
+from .base import browser_headers, fetch_json_via_browser, fetch_page, http_get_json
 from .buyability import assess_buyability
 from .embedded_json import extract_offers_for_product
 from .jsonld import extract_products
@@ -26,8 +28,21 @@ log = logging.getLogger(__name__)
 _DOMAINS = {"mediamarkt": "www.mediamarkt.de", "saturn": "www.saturn.de"}
 _SALESLINE = {"mediamarkt": "Media", "saturn": "Saturn"}
 
-# Rotierender persisted-query-Hash; bei Bedarf in der Quelle aktualisieren.
+# Persisted-Query-Hash der GetProductAvailabilities-Operation.
+#
+# WICHTIG: Dieser Hash rotiert mit jedem PWA-Release (aktuell ~v8.451.0). Ist er
+# veraltet, antwortet die API mit HTTP 200 + "PersistedQueryNotFound" und es
+# kommt kein Filialbestand (sauber, kein Fehlalarm). Aktualisieren:
+#   1. Produktseite im Browser öffnen, DevTools → Netzwerk, Filter "graphql".
+#   2. Unten "Verfügbarkeit im Markt" prüfen (PLZ eingeben) → der dann gefeuerte
+#      Request "GetProductAvailabilities" enthält in der URL den aktuellen
+#      sha256Hash. Diesen hier eintragen.
 _AVAIL_QUERY_HASH = "810286f7ae9368cb54ccd122b21e453bd00ed7dbf534b8259b8bed68f8da999f"
+
+# Header, die die echte PWA an /api/v1/graphql sendet. Ohne den korrekten
+# client-name ("pwa-client-pqm", NICHT "pwa") blockt die WAF mit HTTP 403.
+_GQL_CLIENT_NAME = "pwa-client-pqm"
+_GQL_CLIENT_VERSION = "8.451.0"
 
 _IN_STORE_TOKENS = {"IN_STORE", "IN_WAREHOUSE", "AVAILABLE", "PICKUP"}
 # Negativ-Status, die "AVAILABLE" als Teilstring enthalten (z.B. NOT_AVAILABLE,
@@ -136,8 +151,23 @@ def _store_offers(
             % (_SALESLINE[chain], _AVAIL_QUERY_HASH)
         ),
     }
-    headers = browser_headers({"Accept": "application/json", "apollographql-client-name": "pwa"})
+    headers = browser_headers({
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "apollographql-client-name": _GQL_CLIENT_NAME,
+        "apollographql-client-version": _GQL_CLIENT_VERSION,
+        "x-operation": "GetProductAvailabilities",
+        "x-cacheable": "true",
+        "x-flow-id": str(uuid.uuid4()),
+    })
+
+    # 1) Direkt versuchen (schnell). 2) Bei Bot-Wall (403/HTML) über eine echte
+    #    Browser-Session, die zuerst die Produktseite besucht (Cookies/Challenge)
+    #    und die API dann per In-Page-fetch() abruft.
     data = http_get_json(endpoint, headers=headers, params=params)
+    if not isinstance(data, dict):
+        full_url = f"{endpoint}?{urlencode(params)}"
+        data = fetch_json_via_browser(full_url, referer=url, headers=headers)
     if not isinstance(data, dict):
         log.info("%s: Filial-API lieferte kein JSON – Filialbestand übersprungen.", chain)
         return []
