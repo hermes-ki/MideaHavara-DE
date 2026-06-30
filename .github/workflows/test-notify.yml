@@ -1,6 +1,6 @@
 name: Test-Alarm senden
 
-# Schickt einmalig einen Beispiel-Alarm an Telegram, um den kompletten
+# Schickt einmalig einen  Beispiel-Alarm an Telegram, um den kompletten
 # Benachrichtigungsweg bis aufs Handy zu prüfen. Nur manuell auslösbar.
 on:
   workflow_dispatch: {}
