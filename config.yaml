@@ -18,18 +18,18 @@ products:
     # ("Midea Comfee PortaSplit"), daher KEIN comfee-Ausschluss. Der EAN-Abgleich
     # ist der starke Anker; ohne EAN greift der Titel ("portasplit").
     title_must_exclude: []
-    max_price: 800.0  # EUR – nur Angebote darunter lösen aus
+    max_price: 1000.0  # EUR – nur Angebote darunter lösen aus
     allow_used: true  # Amazon Warehouse / gebrauchte Artikel erlauben
     # Pro Quelle die direkte Produkt-URL. Leere/fehlende Werte = übersprungen.
     urls:
-      geizhals: "https://geizhals.de/midea-comfee-portasplit-v233573.html"
-      idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/204374464_-portasplit-3-5-kw-midea.html"
-      mediamarkt: "https://www.mediamarkt.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
-      saturn: "https://www.saturn.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
-      obi: "https://www.obi.de/p/8620890/midea-mobile-split-klimaanlage-portasplit"
-      bauhaus: "https://www.bauhaus.info/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233"
-      hornbach: "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/"
-      amazon: "https://www.amazon.de/dp/B0D3PP64JS"
+      geizhals: ""
+      idealo: ""
+      mediamarkt: "https://www.mediamarkt.at/de/product/_midea-portasplit-mobile-klimaanlage-max-raumgrosse-42-m-eek-a-12000-btuh-weiss-2075674.html"
+      saturn: ""
+      obi: "https://www.obi.at/p/3586245/midea-mobile-split-klimaanlage-portasplit"
+      bauhaus: "https://www.bauhaus.at/p/31934233"
+      hornbach: ""
+      amazon: ""
 
   # Weiteres Gerät? Einfach einen zweiten Eintrag nach demselben Muster anlegen:
   # - name: "Beispiel-Klimagerät"
@@ -52,14 +52,14 @@ location:
 
 # Quellen ein-/ausschalten. Schlüssel entsprechen den Adapter-Namen.
 sources:
-  geizhals: true
-  idealo: true
+  geizhals: false
+  idealo: false
   mediamarkt: true
-  saturn: true
+  saturn: false
   obi: true
   bauhaus: true
-  hornbach: true
-  amazon: true
+  hornbach: false
+  amazon: false
 
 # Tägliche "lebt noch"-Statusmeldung via Telegram (günstigster Preis je Gerät,
 # Quellen mit Daten). Zusätzlich ein Sofort-Alarm bei Totalausfall (keine
