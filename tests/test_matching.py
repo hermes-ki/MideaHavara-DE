@@ -18,7 +18,7 @@ def make_config(allow_used: bool = True, max_price: float = 800.0) -> Config:
                 name="Midea PortaSplit 12.000 BTU",
                 eans=["4048164116478"],
                 title_must_include=["portasplit"],
-                title_must_exclude=["comfee"],
+                title_must_exclude=[],
                 max_price=max_price,
                 allow_used=allow_used,
             )
@@ -65,11 +65,25 @@ def test_rejects_wrong_ean():
     assert not buyable(offer(ean="0000000000000"), make_config())
 
 
-def test_rejects_comfee_variant_by_title_when_no_ean():
-    # Teure Alt-Variante ohne EAN -> über Titel ausgeschlossen.
+def test_comfee_branded_product_matches_by_title():
+    # Das Zielgerät IST Comfee-gebrandet -> "Midea Comfee PortaSplit" muss
+    # per Titel matchen (kein comfee-Ausschluss).
+    o = offer(ean=None, title="Midea Comfee PortaSplit Mobile", price=699.0)
+    assert matches_product(o, make_config().product)
+    assert buyable(o, make_config())
+
+
+def test_comfee_branded_rejected_only_by_price():
+    # Dasselbe Gerät über Budget -> nur der Preisfilter lehnt ab, nicht der Titel.
     o = offer(ean=None, title="Midea Comfee PortaSplit Mobile", price=1599.0)
-    assert not matches_product(o, make_config().product)
+    assert matches_product(o, make_config().product)
     assert not buyable(o, make_config())
+
+
+def test_non_portasplit_rejected_by_title():
+    # Anderes Gerät ohne "portasplit" im Titel -> kein Match.
+    o = offer(ean=None, title="Midea Klimaanlage Mobil 9000 BTU", price=499.0)
+    assert not matches_product(o, make_config().product)
 
 
 def test_used_allowed_when_configured():

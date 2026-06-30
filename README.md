@@ -22,8 +22,9 @@ GitHub Actions (alle 10 Min)
 ### Filter „nur wirklich bestellbar"
 Ein Angebot alarmiert nur, wenn **alle** Bedingungen erfüllt sind
 (`tracker/matching.py` + `tracker/sources/buyability.py`):
-1. **Richtiges Produkt** – EAN `4048164116478` (oder strikter Titelabgleich,
-   schließt die teure Alt-Variante „Comfee" aus).
+1. **Richtiges Produkt** – EAN `4048164116478` (oder, ohne EAN, Titelabgleich
+   auf „portasplit"). Hinweis: Das Gerät ist Comfee-gebrandet („Midea Comfee
+   PortaSplit"), daher wird „comfee" **nicht** ausgeschlossen.
 2. **Wirklich online bestellbar** – strenge Prüfung: nur strukturiertes
    schema.org `InStock`/`OnlineOnly` zählt. `InStoreOnly` (nur im Markt
    vorrätig) zählt **nicht**; negative Marker („ausverkauft", „nur im Markt",
@@ -41,6 +42,7 @@ Ein Angebot alarmiert nur, wenn **alle** Bedingungen erfüllt sind
 | **MediaMarkt / Saturn** | ✅ eingebettetes JSON (an Produkt-ID gekoppelt) wird geparst → meldet bei echtem Direkt-Angebot < 800 €. Aktuell nur Marketplace-Angebot ~2.589 € (fällt korrekt raus) |
 | **Hornbach** | 🔓 Bot-Wall via Stealth-Browser überwunden (volle Seite), aber Preis/Verfügbarkeit werden erst per Client-API nachgeladen → bräuchte zusätzliches API-Parsing (zurückgestellt) |
 | **Bauhaus** | ⚠️ erreichbar, aber nur Analytics-Daten eingebettet → kein verlässliches Preis/Verfügbarkeits-Signal (zurückgestellt) |
+| **Geizhals** | ✅ kein JSON-LD, aber Bestpreis wird aus `og:title`/`gh_price` geparst (`tracker/sources/geizhals.py`) → meldet bei echtem Bestpreis < 800 € über alle gelisteten Shops |
 | **Idealo / Amazon** | ❌ hart geblockt (Bot-Wall hält auch mit Stealth, da Datacenter-IP) – bräuchte Residential-Proxy (zurückgestellt) |
 
 **Stealth-Fähigkeit:** Der Browser-Fallback (`tracker/sources/base.py`) verschleiert
