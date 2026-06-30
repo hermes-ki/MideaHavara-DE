@@ -1,21 +1,47 @@
-# Konfiguration des Midea PortaSplit Verfügbarkeits-Trackers.
-# Anpassbar ohne Code-Änderung.
+# Konfiguration des Verfügbarkeits-Trackers. Anpassbar ohne Code-Änderung.
+#
+# Die Watchlist (products) kann beliebig viele Geräte enthalten – jeder
+# Eintrag bringt seine eigenen Shop-URLs mit. Die globalen Blöcke
+# (location, sources) gelten für alle Produkte.
 
-product:
-  name: "Midea PortaSplit 12.000 BTU"
-  # Strikter Anker, damit nie das falsche/zu teure Gerät matcht.
-  # Bestätigte EAN der gesuchten Midea PortaSplit 12.000 BTU.
-  eans:
-    - "4048164116478"
-  # Schlüsselwörter für den Fallback-Titelabgleich, falls eine Quelle keine
-  # EAN liefert. ALLE müssen (case-insensitiv) im Titel vorkommen.
-  title_must_include:
-    - "portasplit"
-  # Schließt die teure Alt-Variante zusätzlich über den Titel aus.
-  title_must_exclude:
-    - "comfee"
-  max_price: 800.0  # EUR – nur Angebote darunter lösen aus
-  allow_used: true  # Amazon Warehouse / gebrauchte Artikel erlauben
+products:
+  - name: "Midea PortaSplit 12.000 BTU"
+    # Strikter Anker, damit nie das falsche/zu teure Gerät matcht.
+    # Bestätigte EAN der gesuchten Midea PortaSplit 12.000 BTU.
+    eans:
+      - "4048164116478"
+    # Schlüsselwörter für den Fallback-Titelabgleich, falls eine Quelle keine
+    # EAN liefert. ALLE müssen (case-insensitiv) im Titel vorkommen.
+    title_must_include:
+      - "portasplit"
+    # Hinweis: Das Zielgerät (EAN 4048164116478) IST Comfee-gebrandet
+    # ("Midea Comfee PortaSplit"), daher KEIN comfee-Ausschluss. Der EAN-Abgleich
+    # ist der starke Anker; ohne EAN greift der Titel ("portasplit").
+    title_must_exclude: []
+    max_price: 800.0  # EUR – nur Angebote darunter lösen aus
+    allow_used: true  # Amazon Warehouse / gebrauchte Artikel erlauben
+    # Pro Quelle die direkte Produkt-URL. Leere/fehlende Werte = übersprungen.
+    urls:
+      geizhals: "https://geizhals.de/midea-comfee-portasplit-v233573.html"
+      idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/204374464_-portasplit-3-5-kw-midea.html"
+      mediamarkt: "https://www.mediamarkt.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
+      saturn: "https://www.saturn.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
+      obi: "https://www.obi.de/p/8620890/midea-mobile-split-klimaanlage-portasplit"
+      bauhaus: "https://www.bauhaus.info/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233"
+      hornbach: "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/"
+      amazon: "https://www.amazon.de/dp/B0D3PP64JS"
+
+  # Weiteres Gerät? Einfach einen zweiten Eintrag nach demselben Muster anlegen:
+  # - name: "Beispiel-Klimagerät"
+  #   eans:
+  #     - "0000000000000"
+  #   title_must_include:
+  #     - "beispiel"
+  #   title_must_exclude: []
+  #   max_price: 600.0
+  #   allow_used: false
+  #   urls:
+  #     idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/…"
 
 location:
   postal_code: "74321"
@@ -26,7 +52,7 @@ location:
 
 # Quellen ein-/ausschalten. Schlüssel entsprechen den Adapter-Namen.
 sources:
-  geizhals: true  # Achtung: hinterlegte URL ist die Comfee-Variante (s.u.)
+  geizhals: true
   idealo: true
   mediamarkt: true
   saturn: true
@@ -35,13 +61,9 @@ sources:
   hornbach: true
   amazon: true
 
-# Pro Quelle die direkte Produkt-URL. Leere Werte werden übersprungen.
-source_urls:
-  geizhals: "https://geizhals.de/midea-comfee-porta-split-a3201826.html?hloc=de&hloc=at"
-  idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/204374464.html"
-  mediamarkt: "https://www.mediamarkt.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
-  saturn: "https://www.saturn.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
-  obi: "https://www.obi.de/p/8620890/midea-mobile-split-klimaanlage-portasplit"
-  bauhaus: "https://www.bauhaus.info/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233"
-  hornbach: "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/"
-  amazon: "https://www.amazon.de/dp/B0D3PP64JS"
+# Tägliche "lebt noch"-Statusmeldung via Telegram (günstigster Preis je Gerät,
+# Quellen mit Daten). Zusätzlich ein Sofort-Alarm bei Totalausfall (keine
+# einzige Quelle lieferte Daten). Beides ist auf max. 1x/Tag entprellt.
+heartbeat:
+  enabled: true
+  hour_utc: 6  # erste Meldung am/nach dieser UTC-Stunde (6 ≈ 8 Uhr MESZ)

@@ -33,6 +33,7 @@ class Offer:
     merchant: str | None = None  # bei Preisvergleichen der konkrete Händler
     store_name: str | None = None  # bei Filialen
     distance_km: float | None = None  # Entfernung der Filiale zum Standort
+    product_name: str | None = None  # konfiguriertes Produkt (Watchlist-Gruppierung)
 
     def key(self) -> str:
         """Stabiler Schlüssel zur Wiedererkennung über mehrere Läufe.

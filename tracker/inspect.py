@@ -14,7 +14,7 @@ import logging
 
 import re
 
-from .config import load_config
+from .config import Config, Product, load_config
 from .sources.base import fetch_page
 from .sources.buyability import assess_buyability
 from .sources.jsonld import extract_products
@@ -74,10 +74,15 @@ def _fetch(url: str) -> tuple[str | None, str]:
 
 def inspect() -> int:
     cfg = load_config()
-    print(f"=== Diagnose für '{cfg.product.name}' (EAN {cfg.product.eans}) ===\n")
+    for product in cfg.products:
+        print(f"=== Diagnose für '{product.name}' (EAN {product.eans}) ===\n")
+        _inspect_product(cfg, product)
+    return 0
 
+
+def _inspect_product(cfg: Config, product: Product) -> None:
     for source in cfg.enabled_sources():
-        url = cfg.url_for(source)
+        url = product.url_for(source)
         if not url:
             print(f"[{source}] keine URL konfiguriert – übersprungen\n")
             continue
@@ -108,8 +113,6 @@ def inspect() -> int:
             print("  Eingebettete Signale:")
             _dump_embedded_signals(html)
         print()
-
-    return 0
 
 
 if __name__ == "__main__":

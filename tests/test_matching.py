@@ -1,6 +1,6 @@
 """Tests für den 'nur wirklich bestellbar'-Filter und Produktabgleich."""
 
-from tracker.config import Config, Location, Product, Store
+from tracker.config import Config, Location, Product
 from tracker.matching import haversine_km, is_buyable, matches_product
 from tracker.models import (
     CHANNEL_ONLINE,
@@ -13,19 +13,25 @@ from tracker.models import (
 
 def make_config(allow_used: bool = True, max_price: float = 800.0) -> Config:
     return Config(
-        product=Product(
-            name="Midea PortaSplit 12.000 BTU",
-            eans=["4048164116478"],
-            title_must_include=["portasplit"],
-            title_must_exclude=["comfee"],
-            max_price=max_price,
-            allow_used=allow_used,
-        ),
+        products=[
+            Product(
+                name="Midea PortaSplit 12.000 BTU",
+                eans=["4048164116478"],
+                title_must_include=["portasplit"],
+                title_must_exclude=[],
+                max_price=max_price,
+                allow_used=allow_used,
+            )
+        ],
         location=Location("74321", "Bietigheim-Bissingen", 48.9543, 9.1316, 25.0),
         sources={},
-        source_urls={},
         stores={},
     )
+
+
+def buyable(o: Offer, cfg: Config) -> bool:
+    """Test-Hilfe: prüft ein Angebot gegen das (einzige) Config-Produkt."""
+    return is_buyable(o, cfg.product, cfg.location)
 
 
 def offer(**kw) -> Offer:
@@ -44,49 +50,63 @@ def offer(**kw) -> Offer:
 
 
 def test_valid_offer_passes():
-    assert is_buyable(offer(), make_config())
+    assert buyable(offer(), make_config())
 
 
 def test_rejects_over_price():
-    assert not is_buyable(offer(price=899.0), make_config())
+    assert not buyable(offer(price=899.0), make_config())
 
 
 def test_rejects_out_of_stock():
-    assert not is_buyable(offer(in_stock=False), make_config())
+    assert not buyable(offer(in_stock=False), make_config())
 
 
 def test_rejects_wrong_ean():
-    assert not is_buyable(offer(ean="0000000000000"), make_config())
+    assert not buyable(offer(ean="0000000000000"), make_config())
 
 
-def test_rejects_comfee_variant_by_title_when_no_ean():
-    # Teure Alt-Variante ohne EAN -> über Titel ausgeschlossen.
+def test_comfee_branded_product_matches_by_title():
+    # Das Zielgerät IST Comfee-gebrandet -> "Midea Comfee PortaSplit" muss
+    # per Titel matchen (kein comfee-Ausschluss).
+    o = offer(ean=None, title="Midea Comfee PortaSplit Mobile", price=699.0)
+    assert matches_product(o, make_config().product)
+    assert buyable(o, make_config())
+
+
+def test_comfee_branded_rejected_only_by_price():
+    # Dasselbe Gerät über Budget -> nur der Preisfilter lehnt ab, nicht der Titel.
     o = offer(ean=None, title="Midea Comfee PortaSplit Mobile", price=1599.0)
+    assert matches_product(o, make_config().product)
+    assert not buyable(o, make_config())
+
+
+def test_non_portasplit_rejected_by_title():
+    # Anderes Gerät ohne "portasplit" im Titel -> kein Match.
+    o = offer(ean=None, title="Midea Klimaanlage Mobil 9000 BTU", price=499.0)
     assert not matches_product(o, make_config().product)
-    assert not is_buyable(o, make_config())
 
 
 def test_used_allowed_when_configured():
-    assert is_buyable(offer(condition=CONDITION_USED, price=650.0), make_config(allow_used=True))
+    assert buyable(offer(condition=CONDITION_USED, price=650.0), make_config(allow_used=True))
 
 
 def test_used_rejected_when_not_allowed():
-    assert not is_buyable(offer(condition=CONDITION_USED), make_config(allow_used=False))
+    assert not buyable(offer(condition=CONDITION_USED), make_config(allow_used=False))
 
 
 def test_store_within_radius_passes():
     o = offer(channel=CHANNEL_STORE, store_name="Ludwigsburg", distance_km=12.0)
-    assert is_buyable(o, make_config())
+    assert buyable(o, make_config())
 
 
 def test_store_outside_radius_rejected():
     o = offer(channel=CHANNEL_STORE, store_name="Karlsruhe", distance_km=60.0)
-    assert not is_buyable(o, make_config())
+    assert not buyable(o, make_config())
 
 
 def test_store_without_distance_rejected():
     o = offer(channel=CHANNEL_STORE, store_name="Unbekannt", distance_km=None)
-    assert not is_buyable(o, make_config())
+    assert not buyable(o, make_config())
 
 
 def test_haversine_known_distance():

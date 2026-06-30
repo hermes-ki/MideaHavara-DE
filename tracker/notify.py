@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import html
 import logging
 import sys
+from collections import defaultdict
 
 import requests
 
 from .config import Secrets
-from .models import Offer
+from .models import CHANNEL_STORE, CONDITION_NEW, Offer
 
 log = logging.getLogger(__name__)
 
@@ -40,21 +42,76 @@ def send_telegram(text: str, secrets: Secrets) -> bool:
     return True
 
 
-def format_offers(product_name: str, offers: list[Offer]) -> str:
-    """Baut eine kompakte HTML-Nachricht für eine Liste neuer Angebote."""
-    n = len(offers)
-    header = f"🟢 <b>{product_name}</b> verfügbar! ({n} neue{'s' if n == 1 else ''} Angebot{'e' if n != 1 else ''})"
-    lines = [header, ""]
-    for o in sorted(offers, key=lambda x: x.price):
-        cond = "Neu" if o.condition == "new" else "Gebraucht"
-        where = o.merchant or o.source.capitalize()
-        loc = ""
-        if o.channel == "store" and o.store_name:
-            dist = f", ~{o.distance_km:.0f} km" if o.distance_km is not None else ""
-            loc = f" 🏬 Filiale {o.store_name}{dist}"
-        lines.append(f"• <b>{o.price:.2f} €</b> – {where} [{cond}]{loc}")
-        lines.append(f"  <a href=\"{o.url}\">Zum Angebot</a>")
+def _offer_line(o: Offer) -> list[str]:
+    """Zwei HTML-Zeilen für ein Angebot. Alle Fremdtexte werden escaped,
+    damit ein gescrapeter Titel/Händler mit '<', '>' oder '&' die
+    HTML-Nachricht nicht zerschießt (Telegram würde sie sonst mit 400
+    ablehnen – ausgerechnet im Alarm-Moment)."""
+    cond = "Neu" if o.condition == CONDITION_NEW else "Gebraucht"
+    where = html.escape(o.merchant or o.source.capitalize())
+    loc = ""
+    if o.channel == CHANNEL_STORE and o.store_name:
+        dist = f", ~{o.distance_km:.0f} km" if o.distance_km is not None else ""
+        loc = f" 🏬 Filiale {html.escape(o.store_name)}{dist}"
+    return [
+        f"• <b>{o.price:.2f} €</b> – {where} [{cond}]{loc}",
+        f"  <a href=\"{html.escape(o.url, quote=True)}\">Zum Angebot</a>",
+    ]
+
+
+def format_offers(offers: list[Offer]) -> str:
+    """Baut eine kompakte HTML-Nachricht, nach Produkt gruppiert."""
+    by_product: dict[str, list[Offer]] = defaultdict(list)
+    for o in offers:
+        by_product[o.product_name or o.title].append(o)
+
+    lines: list[str] = []
+    for product_name, group in by_product.items():
+        n = len(group)
+        lines.append(
+            f"🟢 <b>{html.escape(product_name)}</b> verfügbar! "
+            f"({n} neue{'s' if n == 1 else ''} Angebot{'e' if n != 1 else ''})"
+        )
+        lines.append("")
+        for o in sorted(group, key=lambda x: x.price):
+            lines.extend(_offer_line(o))
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+def format_heartbeat(summary, now) -> str:
+    """Tägliche "lebt noch"-Statusmeldung mit günstigstem Preis je Gerät.
+
+    ``summary`` ist ein run.RunSummary, ``now`` ein datetime (für den Zeitstempel).
+    Bewusst lose typisiert, um einen Importzyklus run<->notify zu vermeiden.
+    """
+    ts = now.strftime("%d.%m.%Y %H:%M UTC")
+    lines = [
+        f"💓 <b>Tracker aktiv</b> – {ts}",
+        f"Quellen mit Daten: {summary.sources_with_data}/{summary.attempts}",
+        f"Bestellbar im Budget: {summary.buyable_count}",
+    ]
+    if summary.best_by_product:
+        lines.append("")
+        lines.append("Günstigster Preis je Gerät:")
+        for name, (price, merchant) in sorted(summary.best_by_product.items()):
+            lines.append(
+                f"• {html.escape(name)}: <b>{price:.2f} €</b> ({html.escape(merchant)})"
+            )
+    else:
+        lines.append("")
+        lines.append("Aktuell kein Preis für die beobachteten Geräte gefunden.")
     return "\n".join(lines)
+
+
+def format_outage(summary) -> str:
+    """Alarm, wenn KEINE Quelle Daten lieferte (wahrscheinlich alles geblockt)."""
+    return (
+        "⚠️ <b>Tracker: Totalausfall</b>\n\n"
+        f"Keine einzige Quelle lieferte Daten ({summary.attempts} Abrufversuche). "
+        "Vermutlich sind die Shops gerade alle geblockt oder es gibt ein Problem. "
+        "Solange dieser Zustand anhält, kann eine echte Verfügbarkeit übersehen werden."
+    )
 
 
 def _self_test() -> int:
