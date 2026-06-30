@@ -1,6 +1,6 @@
 name: Diagnose Shops
 
-# Gibt pro Shop die echten Kaufbarkeits-Signale aus (zum Kalibrieren der
+# Gibt pro Shop die echten  Kaufbarkeits-Signale aus (zum Kalibrieren der
 # Adapter). Nur manuell auslösbar, sendet nichts.
 on:
   workflow_dispatch: {}
