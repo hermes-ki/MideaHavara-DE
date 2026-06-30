@@ -21,7 +21,7 @@ class Product:
     title_must_exclude: list[str]
     max_price: float
     allow_used: bool
-    # Pro Quelle die direkte Produkt-URL dieses Geräts. Leere Werte = übersprungen.
+    # Pro Quelle die direkte Produkt-URL dieses Geräts. Leere Werte  = übersprungen.
     urls: dict[str, str] = field(default_factory=dict)
 
     def url_for(self, source: str) -> str:
