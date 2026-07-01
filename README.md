@@ -170,13 +170,20 @@ Wenn deine Actions nicht automatisch starten, nutze einen externen Dienst, der d
   Erstelle ein Personal Access Token (PAT) in GitHub unter Settings -> Developer Settings -> Personal Access Tokens (Tokens (classic)). Gib ihm repo Rechte.
  
   Erstelle bei cron-job.org einen neuen Job.
+  
      Nutze die GitHub API als URL: https://api.github.com/repos/DEIN_USERNAME/DEIN_REPO/actions/workflows/DATEINAME.yml/dispatches
+     
         Setze als Header:
-        Authorization: token DEIN_PAT
-        >Accept< application/vnd.github.v3+json
-        Content-Type: application/json
+        
+        `Authorization` `token DEIN_PAT`
+        
+        `Accept` `application/vnd.github.v3+json`
+        
+        `Content-Type` `application/json`
+        
         (Ersetze DEIN_PERSONAL_ACCESS_TOKEN durch den Token, den du in den Developer Settings generiert hast. Beachte das Leerzeichen nach dem Wort "token".)
-        **Setze als Body (POST):** {"ref": "claude/midea-availability-tracker-jlunla"}.
+        
+        **Setze als Body (POST):** `{"ref": "claude/midea-availability-tracker-jlunla"}`
 
 Damit triggerst du den Workflow von außen alle 10 Minuten. GitHub sieht dies als manuellen Request und führt ihn garantiert aus.
 
