@@ -24,15 +24,12 @@ products:
     urls:
       geizhals: "https://geizhals.de/midea-comfee-portasplit-v233573.html"
       idealo: "https://www.idealo.de/preisvergleich/OffersOfProduct/204374464_-portasplit-3-5-kw-midea.html"
-      mediamarkt: "https://www.mediamarkt.at/de/product/_midea-portasplit-mobile-klimaanlage-max-raumgrosse-42-m-eek-a-12000-btuh-weiss-2075674.html"
+      mediamarkt: "https://www.mediamarkt.de/de/product/_midea-porta-split-142245268.html"
       saturn: "https://www.saturn.de/de/product/_midea-porta-split-klimaanlage-grau-max-raumgrosse-42-m-eek-a-142245268.html"
-      obi: "https://www.obi.at/p/3586245/midea-mobile-split-klimaanlage-portasplit"
-      bauhaus: "https://www.bauhaus.at/p/31934233"
+      obi: "https://www.obi.de/p/8620890/midea-mobile-split-klimaanlage-portasplit"
+      bauhaus: "https://www.bauhaus.info/klimaanlagen/midea-klimasplitgeraet-portasplit/p/31934233"
       hornbach: "https://www.hornbach.de/p/klimasplitgeraet-midea-portasplit-12-000-btu-105-m-weiss/12356554/"
       amazon: "https://www.amazon.de/dp/B0D3PP64JS"
-      # Direktvertrieb (JTL-Shop). Bei Fetch-Zeitpunkt: 857,00 €, "Momentan
-      # nicht verfügbar" (Vorbesteller) – kein EAN aus der Seite ablesbar,
-      # daher matcht hier primär der Titel ("portasplit").
       greensun: "https://www.greensun-germany.com/MIDEA-PortaSplit-35-kW-Mobile-Split-Klimaanlage-Kuehlen-Heizen-ohne-feste-Installation"
 
   # Weiteres Gerät? Einfach einen zweiten Eintrag nach demselben Muster anlegen:
@@ -56,10 +53,10 @@ location:
 
 # Quellen ein-/ausschalten. Schlüssel entsprechen den Adapter-Namen.
 sources:
-  geizhals: false
+  geizhals: true
   idealo: false
   mediamarkt: true
-  saturn: false
+  saturn: true
   obi: true
   bauhaus: true
   hornbach: false

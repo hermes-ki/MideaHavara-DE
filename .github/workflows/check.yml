@@ -2,9 +2,11 @@ name: Midea PortaSplit Verfügbarkeit
 
 on:
   schedule:
-    # Alle 10 Minuten (UTC). GitHub  kann den Start unter Last leicht verzögern.
-    - cron: "35 * * * *"
-  workflow_dispatch: {}  # manueller Start für Tests
+    # GitHub Actions unterstützt nativ nur 5-Minuten-Cron.
+    # Daher läuft der Workflow alle 5 Minuten und führt darin drei Checks
+    # im 2-Minuten-Abstand aus.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
 
 # Erlaubt dem Workflow, den aktualisierten state.json zurück zu committen.
 permissions:
@@ -12,12 +14,12 @@ permissions:
 
 concurrency:
   group: midea-check
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 8  # Sicherheitsnetz: bricht ab, falls ein Shop hängt
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -32,20 +34,25 @@ jobs:
       - name: Chromium für Browser-Fallback installieren
         run: python -m playwright install --with-deps chromium
 
-      - name: Verfügbarkeit prüfen
+      - name: Verfügbarkeit prüfen (3 Durchläufe im 2-Minuten-Abstand)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python -m tracker.run
-
-      - name: State zurück committen
         run: |
-          if [[ -n "$(git status --porcelain state.json)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add state.json
-            git commit -m "chore: update availability state [skip ci]"
-            git push
-          else
-            echo "Kein State-Update."
-          fi
+          set -euo pipefail
+          for pass in 1 2 3; do
+            echo "=== Check-Durchlauf ${pass}/3 ==="
+            python -m tracker.run
+            if [[ -n "$(git status --porcelain state.json)" ]]; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add state.json
+              git commit -m "chore: update availability state [skip ci]"
+              git push
+            else
+              echo "Kein State-Update."
+            fi
+            if [[ "$pass" -lt 3 ]]; then
+              sleep 120
+            fi
+          done
