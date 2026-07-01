@@ -72,6 +72,8 @@ automatisch über den Workflow **CI (Tests)** (`.github/workflows/ci.yml`).
 
 ## Einrichtung (einmalig)
 
+### 0. Dieses Repo in ein eigenes kopieren, alle Actions/Workflows wieder aktivieren falls Github sie abgedreht hat (evtl. forknetzwerk verlassen)
+
 ### 1. Telegram-Bot anlegen
 1. In Telegram **@BotFather** öffnen → `/newbot` → Namen vergeben → du erhältst
    einen **Bot-Token** (`123456:ABC...`).
@@ -175,7 +177,7 @@ Das umgeht das Fork-Limit komplett.
  
   Erstelle bei cron-job.org einen neuen Job.
   
-  Nutze die GitHub API als URL: https://api.github.com/repos/DEIN_USERNAME/DEIN_REPO/actions/workflows/DATEINAME.yml/dispatches
+  Nutze die GitHub API als URL (Tausche deinen Usernamen aus): `https://api.github.com/repos/DEIN_USERNAME/MideaHavara/actions/workflows/check.yml/dispatches`
      
   Setze als Header:
   
