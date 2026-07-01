@@ -64,7 +64,7 @@ sources:
   bauhaus: true
   hornbach: false
   amazon: false
-  greensun: true
+  greensun: false
 
 # Tägliche "lebt noch"-Statusmeldung via Telegram (günstigster Preis je Gerät,
 # Quellen mit Daten). Zusätzlich ein Sofort-Alarm bei Totalausfall (keine
