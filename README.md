@@ -1,8 +1,11 @@
 # Midea PortaSplit 12.000 BTU – Verfügbarkeits-Tracker
 
+⚠️ **Es handelt sich hier um eine modifizerte Version von diesem Projekt https://github.com/bhipfl/Midea-tracker/**)
+Quellen für Mediamarkt, Obi und Bauhaus wurden auf die österreichische URL getauscht und alle anderen Quellen im config.yaml deaktiviert. Greensun Germany wurde hinzugefügt, da die über Ali auch hunderte verkaufen, aber Ali so wie Amazon und Idealo schwierig automatisiert zu checken sind.
+
 Prüft alle ~10 Minuten automatisch mehrere Quellen auf ein **wirklich
 bestellbares** Angebot der **Midea PortaSplit 12.000 BTU** (EAN
-`4048164116478`) unter **800 €** – online **und** in Märkten im **25-km-Umkreis
+`4048164116478`) unter **1000 €** – online **und** in Märkten im **25-km-Umkreis
 von 74321 Bietigheim-Bissingen** – und schickt bei einer **neuen
 Verfügbarkeit** eine **Telegram-Push** mit direktem Kauf-Link.
 
@@ -44,6 +47,7 @@ Ein Angebot alarmiert nur, wenn **alle** Bedingungen erfüllt sind
 | **Bauhaus** | ⚠️ erreichbar, aber nur Analytics-Daten eingebettet → kein verlässliches Preis/Verfügbarkeits-Signal (zurückgestellt) |
 | **Geizhals** | ✅ kein JSON-LD, aber Bestpreis wird aus `og:title`/`gh_price` geparst (`tracker/sources/geizhals.py`) → meldet bei echtem Bestpreis < 800 € über alle gelisteten Shops |
 | **Idealo / Amazon** | ❌ hart geblockt (Bot-Wall hält auch mit Stealth, da Datacenter-IP) – bräuchte Residential-Proxy (zurückgestellt) |
+| **Greensun Germany (Ali)** | ⚠️  noch work in Progress, funktioniert evtl nicht verlässlich |
 
 **Stealth-Fähigkeit:** Der Browser-Fallback (`tracker/sources/base.py`) verschleiert
 Automations-Merkmale und löst JS-Challenges auf; `fetch_page()` erkennt auch
@@ -158,8 +162,23 @@ python -m pytest -q
 ## Scharf schalten
 Sind Secrets und mindestens eine Produkt-URL gesetzt, läuft der Workflow
 automatisch alle 10 Minuten. Manuell anstoßen: **Actions → „Midea PortaSplit
-Verfügbarkeit" → Run workflow**. Sobald das Gerät unter 800 € bestellbar ist,
+Verfügbarkeit" → Run workflow**. Sobald das Gerät unter 1000 € bestellbar ist,
 kommt die Push aufs Handy.
+
+Wenn deine Actions nicht automatisch starten, nutze einen externen Dienst, der deinen Workflow per workflow_dispatch via API-Call auslöst. Das umgeht das Fork-Limit komplett.
+ Einrichtung:
+  Erstelle ein Personal Access Token (PAT) in GitHub unter Settings -> Developer Settings -> Personal Access Tokens (Tokens (classic)). Gib ihm repo Rechte.
+ 
+  Erstelle bei cron-job.org einen neuen Job.
+     Nutze die GitHub API als URL: https://api.github.com/repos/DEIN_USERNAME/DEIN_REPO/actions/workflows/DATEINAME.yml/dispatches
+        Setze als Header:
+        Authorization: token DEIN_PAT
+        >Accept< application/vnd.github.v3+json
+        Content-Type: application/json
+        (Ersetze DEIN_PERSONAL_ACCESS_TOKEN durch den Token, den du in den Developer Settings generiert hast. Beachte das Leerzeichen nach dem Wort "token".)
+        **Setze als Body (POST):** {"ref": "claude/midea-availability-tracker-jlunla"}.
+
+Damit triggerst du den Workflow von außen alle 10 Minuten. GitHub sieht dies als manuellen Request und führt ihn garantiert aus.
 
 ## Hinweise
 - Rein **privater** Gebrauch, niedrige Frequenz, klarer User-Agent. Manche
